@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>としお 無料ツール集 | FIRE・住宅ローン・資産形成</title>
+  <meta name="description" content="FIRE達成率・住宅ローン診断・資産運用シミュレーターなど、としおが作った無料の資産形成ツール集。">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      padding: 24px 16px 60px;
+    }
+    .container { max-width: 640px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 32px; }
+    header h1 { font-size: 1.4rem; font-weight: 800; }
+    header p { margin-top: 8px; font-size: 0.875rem; color: #555; }
+    .profile {
+      display: flex; align-items: center; gap: 12px;
+      background: #fff; border-radius: 12px; padding: 16px;
+      margin-bottom: 28px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: #1a1a2e; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 800; flex-shrink: 0;
+    }
+    .profile-text .name { font-weight: 700; font-size: 0.95rem; }
+    .profile-text .desc { font-size: 0.78rem; color: #666; margin-top: 2px; }
+    .section-title {
+      font-size: 0.8rem; font-weight: 700; color: #888;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 12px; margin-top: 24px;
+    }
+    .tool-card {
+      background: #fff; border-radius: 14px; padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      text-decoration: none; color: inherit;
+      display: flex; align-items: center; gap: 16px;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .tool-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+    .tool-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .tool-card .tool-info .tool-name { font-weight: 700; font-size: 0.95rem; }
+    .tool-card .tool-info .tool-desc { font-size: 0.78rem; color: #666; margin-top: 3px; }
+    .badge-new {
+      margin-left: 8px; background: #ff5252; color: #fff;
+      font-size: 0.65rem; font-weight: 700; padding: 2px 6px;
+      border-radius: 4px; vertical-align: middle;
+    }
+    .badge-soon {
+      margin-left: 8px; background: #e0e0e0; color: #888;
+      font-size: 0.65rem; font-weight: 700; padding: 2px 6px;
+      border-radius: 4px; vertical-align: middle;
+    }
+    .arrow { margin-left: auto; color: #ccc; font-size: 1.1rem; }
+    footer {
+      text-align: center; font-size: 0.75rem; color: #aaa; margin-top: 40px;
+    }
+    footer a { color: #3b6cf7; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>としお 無料ツール集</h1>
+    <p>FIRE・住宅ローン・資産形成の計算ツール</p>
+  </header>
+
+  <div class="profile" onclick="window.open('https://x.com/toshi11_', '_blank')" style="cursor:pointer">
+    <div class="avatar">と</div>
+    <div class="profile-text">
+      <div class="name">としお</div>
+      <div class="desc">30代IT・4人家族 | 総資産6400万・FIRE達成率64% | 住宅ローン10年完済</div>
+    </div>
+  </div>
+
+  <div class="section-title">住宅ローン</div>
+
+  <a class="tool-card" href="loan-check/">
+    <div class="tool-icon" style="background:#e8f0fe">🏠</div>
+    <div class="tool-info">
+      <div class="tool-name">住宅ローン 大丈夫？診断<span class="badge-new">NEW</span></div>
+      <div class="tool-desc">年収・年齢・借入額から返済比率・完済年齢を判定。金利上昇シミュレーション付き。</div>
+    </div>
+    <div class="arrow">›</div>
+  </a>
+
+  <div class="section-title">FIRE・資産形成</div>
+
+  <div class="tool-card" style="opacity:0.5;cursor:default">
+    <div class="tool-icon" style="background:#f3e8ff">🔥</div>
+    <div class="tool-info">
+      <div class="tool-name">FIRE達成率チェッカー<span class="badge-soon">準備中</span></div>
+      <div class="tool-desc">総資産・目標額・運用利回りからFIRE達成率と残り年数を計算。</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <div class="tool-card" style="opacity:0.5;cursor:default">
+    <div class="tool-icon" style="background:#e8f5e9">📈</div>
+    <div class="tool-info">
+      <div class="tool-name">資産運用シミュレーター<span class="badge-soon">準備中</span></div>
+      <div class="tool-desc">積立額・期間・利回りで将来資産を試算。4モード対応。</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <footer>
+    <p>© としお | <a href="https://note.com/toshi11_" target="_blank" rel="noopener">note</a> | <a href="https://x.com/toshi11_" target="_blank" rel="noopener">X (Twitter)</a></p>
+  </footer>
+
+</div>
+</body>
+</html>
