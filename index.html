@@ -25,9 +25,7 @@
     }
     .avatar {
       width: 48px; height: 48px; border-radius: 50%;
-      background: #1a1a2e; color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; font-weight: 800; flex-shrink: 0;
+      object-fit: cover; flex-shrink: 0;
     }
     .profile-text .name { font-weight: 700; font-size: 0.95rem; }
     .profile-text .desc { font-size: 0.78rem; color: #666; margin-top: 2px; }
@@ -77,8 +75,8 @@
     <p>FIRE・住宅ローン・資産形成の計算ツール</p>
   </header>
 
-  <div class="profile" onclick="window.open('https://x.com/toshi11_', '_blank')" style="cursor:pointer">
-    <div class="avatar">と</div>
+  <div class="profile">
+    <img class="avatar" src="https://pbs.twimg.com/profile_images/1931350155112128512/SPWm8K8G_400x400.jpg" alt="としお">
     <div class="profile-text">
       <div class="name">としお</div>
       <div class="desc">30代IT・4人家族 | 総資産6400万・FIRE達成率64% | 住宅ローン10年完済</div>
