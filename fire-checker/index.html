@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIRE達成率チェッカー | としお</title>
+  <meta name="description" content="現在の資産・積立額・利回りからFIRE達成率と残り年数を計算。4%ルール対応。としおのプリセット付き。">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+    .container { max-width: 640px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 24px; }
+    header h1 { font-size: 1.5rem; font-weight: 800; line-height: 1.4; }
+    header p { margin-top: 8px; font-size: 0.875rem; color: #555; }
+
+    .card {
+      background: #fff; border-radius: 16px; padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 20px;
+    }
+    .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
+
+    /* プリセット */
+    .preset-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #1a1a2e; color: #fff;
+      border: none; border-radius: 8px; padding: 8px 14px;
+      font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      margin-bottom: 16px; transition: background 0.15s;
+    }
+    .preset-btn:hover { background: #2c3e6b; }
+
+    /* フィールド */
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 0.8rem; font-weight: 600; color: #444; margin-bottom: 6px; }
+    .input-wrap { display: flex; align-items: center; gap: 8px; }
+    .input-wrap input[type="number"] {
+      flex: 1; border: 1.5px solid #dde3ee; border-radius: 8px;
+      padding: 10px 12px; font-size: 1rem; color: #1a1a2e; outline: none;
+      transition: border-color 0.2s; -moz-appearance: textfield;
+    }
+    .input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .input-wrap input:focus { border-color: #ff9800; }
+    .unit { font-size: 0.875rem; color: #666; white-space: nowrap; }
+    .hint { font-size: 0.75rem; color: #888; margin-top: 4px; }
+
+    /* 目標モード切り替え */
+    .target-toggle {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;
+    }
+    .toggle-btn {
+      padding: 10px 8px; border-radius: 10px;
+      border: 1.5px solid #dde3ee; background: #f8f9fb;
+      font-size: 0.78rem; font-weight: 600; color: #666;
+      cursor: pointer; text-align: center; transition: all 0.15s; line-height: 1.4;
+    }
+    .toggle-btn.active {
+      border-color: #ff9800; background: #fff3e0; color: #e65100;
+    }
+
+    /* 計算ボタン */
+    .calc-btn {
+      width: 100%; background: #ff9800; color: #fff;
+      border: none; border-radius: 12px; padding: 14px;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .calc-btn:hover { background: #e65100; }
+    .calc-btn:active { transform: scale(0.98); }
+
+    /* 結果エリア */
+    #result { display: none; }
+
+    .result-main {
+      background: linear-gradient(135deg, #1a1a2e 0%, #2c3e6b 100%);
+      border-radius: 16px; padding: 28px 24px; margin-bottom: 20px;
+      color: #fff; text-align: center;
+    }
+    .result-label { font-size: 0.8rem; color: #aab; margin-bottom: 6px; }
+    .result-rate { font-size: 3rem; font-weight: 800; }
+    .result-rate .result-unit { font-size: 1.4rem; }
+    .result-years { font-size: 1rem; margin-top: 10px; color: #ffd082; font-weight: 700; }
+    .result-target { font-size: 0.8rem; color: #aab; margin-top: 6px; }
+
+    /* プログレスバー */
+    .bar-card {
+      background: #fff; border-radius: 16px; padding: 20px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 20px;
+    }
+    .bar-header {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.78rem; color: #666; margin-bottom: 10px;
+    }
+    .bar-header .bar-pct { font-size: 1rem; font-weight: 800; color: #e65100; }
+    .fire-bar-bg {
+      background: #ffe0b2; border-radius: 8px; height: 18px; overflow: hidden; margin-bottom: 8px;
+    }
+    .fire-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #ff9800, #ff5722);
+      border-radius: 8px; transition: width 0.8s ease;
+    }
+    .fire-bar.achieved { background: linear-gradient(90deg, #43a047, #1de9b6); }
+    .bar-footer {
+      display: flex; justify-content: space-between; font-size: 0.75rem; color: #888;
+    }
+
+    /* スタッツグリッド */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
+    }
+    .stat-card {
+      background: #fff; border-radius: 12px; padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center;
+    }
+    .stat-card .s-label { font-size: 0.72rem; color: #888; margin-bottom: 4px; }
+    .stat-card .s-value { font-size: 1.2rem; font-weight: 700; color: #1a1a2e; }
+    .stat-card .s-sub { font-size: 0.72rem; color: #999; margin-top: 2px; }
+    .stat-card.accent .s-value { color: #e65100; }
+
+    /* 差分ボックス */
+    .delta-box {
+      background: #f0f7ff; border: 1.5px solid #b3d4ff;
+      border-radius: 14px; padding: 18px 20px; margin-bottom: 20px;
+    }
+    .delta-title {
+      font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; color: #1a1a2e;
+    }
+    .delta-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid #dde6f5; font-size: 0.85rem;
+    }
+    .delta-row:last-child { border-bottom: none; }
+    .delta-cond { color: #444; }
+    .delta-change { font-weight: 700; color: #1a6ef7; }
+    .delta-change.none { color: #999; font-weight: 400; }
+
+    /* テーブル */
+    .milestone-table {
+      width: 100%; border-collapse: collapse; font-size: 0.85rem;
+    }
+    .milestone-table th {
+      padding: 8px 10px; font-size: 0.72rem; color: #888;
+      border-bottom: 1px solid #eee; text-align: right;
+    }
+    .milestone-table th:first-child { text-align: left; }
+    .milestone-table td {
+      padding: 9px 10px; border-bottom: 1px solid #f0f0f0; text-align: right;
+    }
+    .milestone-table td:first-child { text-align: left; font-weight: 600; }
+    .milestone-table tr.achieved td {
+      background: #e8f5e9; font-weight: 700; color: #2e7d32;
+    }
+
+    /* としお */
+    .toshio-box {
+      background: linear-gradient(135deg, #1a1a2e 0%, #2c3e6b 100%);
+      border-radius: 12px; padding: 18px 20px; color: #fff;
+    }
+    .toshio-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .toshio-header img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+    .toshio-header .name { font-weight: 700; font-size: 0.9rem; }
+    .toshio-header .desc { font-size: 0.75rem; color: #aab; }
+    .toshio-box p { font-size: 0.85rem; line-height: 1.7; color: #dde; }
+    .toshio-box a {
+      display: inline-block; margin-top: 12px;
+      background: #fff; color: #1a1a2e; font-weight: 700;
+      font-size: 0.85rem; padding: 8px 16px; border-radius: 8px; text-decoration: none;
+    }
+
+    /* シェア・リトライ */
+    .share-btn {
+      width: 100%; background: #000; color: #fff; border: none;
+      border-radius: 12px; padding: 13px; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s; margin-bottom: 12px;
+    }
+    .share-btn:hover { background: #222; }
+    .retry-btn {
+      width: 100%; background: transparent; color: #ff9800;
+      border: 2px solid #ff9800; border-radius: 12px; padding: 12px;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .retry-btn:hover { background: #fff3e0; }
+
+    .back-link {
+      display: block; text-align: center; margin-bottom: 20px;
+      font-size: 0.85rem; color: #3b6cf7; text-decoration: none;
+    }
+    footer { text-align: center; font-size: 0.75rem; color: #aaa; margin-top: 32px; }
+    footer a { color: #3b6cf7; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <a class="back-link" href="../">← ツール一覧に戻る</a>
+
+  <header>
+    <h1>🔥 FIRE達成率<br>チェッカー</h1>
+    <p>現在資産・積立額・利回りから、FIRE達成率と残り年数を計算します。</p>
+  </header>
+
+  <!-- 入力フォーム -->
+  <div class="card" id="form-card">
+
+    <button class="preset-btn" onclick="setPreset()">
+      🔥 としおの数字を入れてみる
+    </button>
+
+    <div class="field">
+      <label>現在の総資産</label>
+      <div class="input-wrap">
+        <input type="number" id="current-asset" placeholder="500" min="0" step="1">
+        <span class="unit">万円</span>
+      </div>
+      <p class="hint">株・NISA・iDeCo・現金など全資産の合計</p>
+    </div>
+
+    <div class="field">
+      <label>毎月の積立額</label>
+      <div class="input-wrap">
+        <input type="number" id="monthly-invest" placeholder="10" min="0" step="1" value="0">
+        <span class="unit">万円</span>
+      </div>
+      <p class="hint">0円でもOK（現状維持のシミュレーション）</p>
+    </div>
+
+    <div class="field">
+      <label>運用利回り（年）</label>
+      <div class="input-wrap">
+        <input type="number" id="annual-rate" placeholder="5.0" min="0.1" max="30" step="0.1" value="5.0">
+        <span class="unit">%</span>
+      </div>
+      <p class="hint">全世界株式インデックス 過去平均 約7〜8% / 保守的な試算なら5%</p>
+    </div>
+
+    <div class="field">
+      <label>FIRE目標の設定方法</label>
+      <div class="target-toggle">
+        <button class="toggle-btn active" id="toggle-auto" onclick="setTargetMode('auto')">📐 4%ルールで<br>自動計算</button>
+        <button class="toggle-btn" id="toggle-manual" onclick="setTargetMode('manual')">✏️ 手動で<br>目標額を入力</button>
+      </div>
+    </div>
+
+    <div id="field-auto">
+      <div class="field">
+        <label>年間の生活費（FIRE後）</label>
+        <div class="input-wrap">
+          <input type="number" id="annual-expense" placeholder="300" min="1" step="1">
+          <span class="unit">万円</span>
+        </div>
+        <p class="hint">FIRE目標額 ＝ 年間生活費 × 25（4%ルール）で自動計算</p>
+      </div>
+    </div>
+
+    <div id="field-manual" style="display:none">
+      <div class="field">
+        <label>FIRE目標額</label>
+        <div class="input-wrap">
+          <input type="number" id="target-asset" placeholder="10000" min="1" step="1">
+          <span class="unit">万円</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">FIRE達成率を計算する →</button>
+  </div>
+
+  <!-- 結果エリア -->
+  <div id="result">
+
+    <!-- メインバナー -->
+    <div class="result-main">
+      <div class="result-label">現在のFIRE達成率</div>
+      <div class="result-rate" id="r-rate">－<span class="result-unit">%</span></div>
+      <div class="result-years" id="r-years">あと ◯年 でFIRE達成予定</div>
+      <div class="result-target" id="r-target-label">目標: ◯万円</div>
+    </div>
+
+    <!-- プログレスバー -->
+    <div class="bar-card">
+      <div class="bar-header">
+        <span>現在資産</span>
+        <span class="bar-pct" id="bar-pct">0%</span>
+        <span>FIRE目標</span>
+      </div>
+      <div class="fire-bar-bg">
+        <div class="fire-bar" id="fire-bar" style="width:0%"></div>
+      </div>
+      <div class="bar-footer">
+        <span id="bar-current">0万円</span>
+        <span id="bar-target">0万円</span>
+      </div>
+    </div>
+
+    <!-- 数値グリッド -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="s-label">現在資産</div>
+        <div class="s-value" id="s-current">－</div>
+        <div class="s-sub">現在の総資産</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">FIRE目標額</div>
+        <div class="s-value" id="s-target">－</div>
+        <div class="s-sub">目標の総資産</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="s-label">不足額</div>
+        <div class="s-value" id="s-shortage">－</div>
+        <div class="s-sub">あと◯万円必要</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">残り年数</div>
+        <div class="s-value" id="s-years">－</div>
+        <div class="s-sub">FIRE達成まで</div>
+      </div>
+    </div>
+
+    <!-- もし条件を変えたら？ -->
+    <div class="delta-box">
+      <div class="delta-title">⚡ もし条件を変えたら？</div>
+      <div class="delta-row">
+        <span class="delta-cond">月積立 +3万円</span>
+        <span class="delta-change" id="d-plus3">－</span>
+      </div>
+      <div class="delta-row">
+        <span class="delta-cond">月積立 +5万円</span>
+        <span class="delta-change" id="d-plus5">－</span>
+      </div>
+      <div class="delta-row">
+        <span class="delta-cond">運用利回り +1%</span>
+        <span class="delta-change" id="d-rate1">－</span>
+      </div>
+      <div class="delta-row">
+        <span class="delta-cond" id="d-label4">年間支出 −60万円（月−5万）</span>
+        <span class="delta-change" id="d-val4">－</span>
+      </div>
+    </div>
+
+    <!-- 年別推移テーブル -->
+    <div class="card">
+      <h2>📅 年別 資産推移</h2>
+      <table class="milestone-table">
+        <thead>
+          <tr>
+            <th>経過年数</th>
+            <th>資産額</th>
+            <th>達成率</th>
+          </tr>
+        </thead>
+        <tbody id="milestone-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- としお -->
+    <div class="card">
+      <div class="toshio-box">
+        <div class="toshio-header">
+          <img src="https://pbs.twimg.com/profile_images/1931350155112128512/SPWm8K8G_400x400.jpg" alt="としお">
+          <div>
+            <div class="name">としお</div>
+            <div class="desc">30代IT・4人家族・FIRE達成率64%</div>
+          </div>
+        </div>
+        <p id="toshio-msg">私自身は現在6,400万円の資産でFIRE達成率64%。毎月積立と運用を続けながら早期リタイアを目指しています。</p>
+        <a href="https://note.com/toshi11_" target="_blank" rel="noopener">📝 FIRE目標の詳細をnoteで読む →</a>
+      </div>
+    </div>
+
+    <!-- Xシェア -->
+    <div class="card">
+      <button class="share-btn" onclick="shareX()">𝕏 で結果をシェアする</button>
+    </div>
+
+    <button class="retry-btn" onclick="retry()">条件を変えて再計算する</button>
+
+  </div><!-- /#result -->
+
+</div>
+
+<footer>
+  <p>© としお | <a href="https://note.com/toshi11_" target="_blank" rel="noopener">note</a> | <a href="https://x.com/toshi11_" target="_blank" rel="noopener">X</a></p>
+  <p style="margin-top:6px">本ツールは参考情報の提供を目的としており、投資アドバイスではありません。</p>
+</footer>
+
+<script>
+  let targetMode = 'auto';
+  let shareData = {};
+
+  /* ---- UI 切り替え ---- */
+  function setTargetMode(mode) {
+    targetMode = mode;
+    document.getElementById('toggle-auto').classList.toggle('active', mode === 'auto');
+    document.getElementById('toggle-manual').classList.toggle('active', mode === 'manual');
+    document.getElementById('field-auto').style.display  = mode === 'auto'   ? 'block' : 'none';
+    document.getElementById('field-manual').style.display = mode === 'manual' ? 'block' : 'none';
+  }
+
+  function setPreset() {
+    document.getElementById('current-asset').value  = '6400';
+    document.getElementById('monthly-invest').value = '10';
+    document.getElementById('annual-rate').value    = '5.0';
+    setTargetMode('manual');
+    document.getElementById('target-asset').value   = '10000';
+  }
+
+  /* ---- 計算ユーティリティ ---- */
+
+  // 目標 target（万円）に達するまでの年数を返す
+  function calcYearsTo(P, pmt_monthly, annualRate, target) {
+    if (P >= target) return 0;
+    const r = annualRate / 100 / 12;
+    if (r === 0) {
+      return pmt_monthly > 0 ? (target - P) / pmt_monthly / 12 : Infinity;
+    }
+    const ratio = (target + pmt_monthly / r) / (P + pmt_monthly / r);
+    if (ratio <= 0 || !isFinite(ratio)) return Infinity;
+    const months = Math.log(ratio) / Math.log(1 + r);
+    return months < 0 ? Infinity : months / 12;
+  }
+
+  // years 年後の資産額を返す
+  function fvAt(P, pmt_monthly, annualRate, years) {
+    const r = annualRate / 100 / 12;
+    const n = years * 12;
+    if (r === 0) return P + pmt_monthly * n;
+    return P * Math.pow(1 + r, n) + pmt_monthly * (Math.pow(1 + r, n) - 1) / r;
+  }
+
+  /* ---- 表示フォーマット ---- */
+  function fmt(v) {
+    if (v >= 10000) return (v / 10000).toFixed(1) + '億円';
+    return Math.round(v).toLocaleString() + '万円';
+  }
+
+  function fmtYears(y) {
+    if (!isFinite(y) || y > 100) return '100年超';
+    if (y <= 0) return '達成済み';
+    const years  = Math.floor(y);
+    const months = Math.round((y - years) * 12);
+    if (months === 0) return years + '年';
+    if (years === 0)  return months + 'ヶ月';
+    return years + '年' + months + 'ヶ月';
+  }
+
+  function deltaStr(baseYears, newYears) {
+    if (baseYears <= 0) return 'すでに達成済み';
+    if (!isFinite(baseYears) && !isFinite(newYears)) return '効果小さい';
+    if (!isFinite(baseYears) &&  isFinite(newYears)) return '▲ 達成可能になる！';
+    if ( isFinite(baseYears) && !isFinite(newYears)) return '効果なし';
+    const diffMonths = Math.round((baseYears - newYears) * 12);
+    if (diffMonths <= 0) return '変化なし';
+    const y = Math.floor(diffMonths / 12);
+    const m = diffMonths % 12;
+    if (y === 0) return `▲ ${m}ヶ月早まる`;
+    if (m === 0) return `▲ ${y}年早まる`;
+    return `▲ ${y}年${m}ヶ月早まる`;
+  }
+
+  /* ---- メイン計算 ---- */
+  function calculate() {
+    const P   = parseFloat(document.getElementById('current-asset').value);
+    const pmt = parseFloat(document.getElementById('monthly-invest').value) || 0;
+    const rate = parseFloat(document.getElementById('annual-rate').value);
+
+    if (isNaN(P))    { alert('現在の総資産を入力してください'); return; }
+    if (isNaN(rate)) { alert('運用利回りを入力してください'); return; }
+
+    let target, targetLabel;
+    if (targetMode === 'auto') {
+      const expense = parseFloat(document.getElementById('annual-expense').value);
+      if (!expense) { alert('年間の生活費を入力してください'); return; }
+      target      = expense * 25;
+      targetLabel = `4%ルール（年間支出${fmt(expense)}×25）`;
+    } else {
+      target = parseFloat(document.getElementById('target-asset').value);
+      if (!target) { alert('FIRE目標額を入力してください'); return; }
+      targetLabel = '手動設定';
+    }
+
+    const fireRate = Math.min(P / target * 100, 100);
+    const baseYears = calcYearsTo(P, pmt, rate, target);
+    const shortage  = Math.max(target - P, 0);
+
+    // 差分計算
+    const yPlus3 = calcYearsTo(P, pmt + 3, rate, target);
+    const yPlus5 = calcYearsTo(P, pmt + 5, rate, target);
+    const yRate1 = calcYearsTo(P, pmt, rate + 1, target);
+    let yFourth, labelFourth;
+    if (targetMode === 'auto') {
+      const expense = parseFloat(document.getElementById('annual-expense').value);
+      const reducedExpense = expense - 60;
+      if (reducedExpense > 0) {
+        const newTarget = reducedExpense * 25;
+        yFourth     = calcYearsTo(P, pmt, rate, newTarget);
+        labelFourth = '年間支出 −60万円（月−5万）';
+      } else {
+        yFourth     = calcYearsTo(P, pmt + 5, rate, target);
+        labelFourth = '月積立 +5万円（追加）';
+      }
+    } else {
+      yFourth     = calcYearsTo(P, pmt + 10, rate, target);
+      labelFourth = '月積立 +10万円';
+    }
+
+    shareData = { rate: Math.round(fireRate), years: baseYears, current: P, target };
+
+    /* --- 結果描画 --- */
+
+    // メインバナー
+    document.getElementById('r-rate').innerHTML = Math.round(fireRate) + '<span class="result-unit">%</span>';
+    document.getElementById('r-years').textContent =
+      P >= target ? '🎉 FIRE達成済み！おめでとうございます！'
+                  : `あと ${fmtYears(baseYears)} でFIRE達成予定`;
+    document.getElementById('r-target-label').textContent = `目標: ${fmt(target)}（${targetLabel}）`;
+
+    // プログレスバー
+    const barWidth = Math.min(fireRate, 100);
+    const bar = document.getElementById('fire-bar');
+    bar.style.width = barWidth + '%';
+    bar.classList.toggle('achieved', P >= target);
+    document.getElementById('bar-pct').textContent   = Math.round(fireRate) + '%';
+    document.getElementById('bar-current').textContent = fmt(P);
+    document.getElementById('bar-target').textContent  = fmt(target);
+
+    // スタッツ
+    document.getElementById('s-current').textContent  = fmt(P);
+    document.getElementById('s-target').textContent   = fmt(target);
+    document.getElementById('s-shortage').textContent = shortage > 0 ? fmt(shortage) : '達成！';
+    document.getElementById('s-years').textContent    = P >= target ? '達成済み' : fmtYears(baseYears);
+
+    // 差分
+    document.getElementById('d-plus3').textContent   = deltaStr(baseYears, yPlus3);
+    document.getElementById('d-plus5').textContent   = deltaStr(baseYears, yPlus5);
+    document.getElementById('d-rate1').textContent   = deltaStr(baseYears, yRate1);
+    document.getElementById('d-label4').textContent  = labelFourth;
+    document.getElementById('d-val4').textContent    = deltaStr(baseYears, yFourth);
+
+    // 達成ゼロの場合は差分を灰色に
+    ['d-plus3','d-plus5','d-rate1','d-val4'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.toggle('none', el.textContent === '変化なし' || el.textContent === 'すでに達成済み');
+    });
+
+    // 年別推移テーブル
+    const tbody = document.getElementById('milestone-tbody');
+    tbody.innerHTML = '';
+
+    const achieveYear = isFinite(baseYears) ? Math.ceil(baseYears) : null;
+    const displayYears = new Set([5, 10, 15, 20, 25, 30]);
+    if (achieveYear && achieveYear <= 60) displayYears.add(achieveYear);
+    const sorted = [...displayYears].sort((a, b) => a - b);
+
+    let alreadyMarked = false;
+    sorted.forEach(y => {
+      const asset = fvAt(P, pmt, rate, y);
+      const rate_ = Math.min(asset / target * 100, 100);
+      const done  = !alreadyMarked && asset >= target;
+      if (done) alreadyMarked = true;
+      const tr = document.createElement('tr');
+      if (done) tr.classList.add('achieved');
+      tr.innerHTML = `
+        <td>${y}年後${done ? ' ✅ FIRE達成' : ''}</td>
+        <td>${fmt(asset)}</td>
+        <td>${Math.round(rate_)}%</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // としおメッセージ
+    let msg;
+    if (P >= target) {
+      msg = 'FIRE達成済みですね！すばらしいです。次は取り崩し戦略を考えましょう。私のnoteでもFIRE後の生活について書いています。';
+    } else if (isFinite(baseYears) && baseYears <= 5) {
+      msg = `FIRE達成率${Math.round(fireRate)}%、あと${fmtYears(baseYears)}！もうすぐFIREですね。私も6,400万円・達成率64%で運用中。一緒にゴールを目指しましょう！`;
+    } else {
+      msg = `FIRE達成率${Math.round(fireRate)}%！${isFinite(baseYears) ? `あと${fmtYears(baseYears)}で達成予定。` : '積立を続けて着実に目標へ。'}私自身は6,400万円でFIRE達成率64%。リアルな資産形成の記録はnoteで公開中です。`;
+    }
+    document.getElementById('toshio-msg').textContent = msg;
+
+    // 表示切替
+    document.getElementById('form-card').style.display = 'none';
+    document.getElementById('result').style.display    = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ---- シェア ---- */
+  function shareX() {
+    const { rate, years, current, target } = shareData;
+    const url = 'https://toshi11-git.github.io/fire-tools/fire-checker/';
+    let text;
+    if (rate >= 100) {
+      text = `現在資産${fmt(current)}でFIRE達成率${rate}%！目標${fmt(target)}をクリア！ #FIRE #資産形成 #NISA`;
+    } else {
+      text = `現在資産${fmt(current)}でFIRE達成率${rate}%！あと${fmtYears(years)}でFIRE達成予定 #FIRE #資産形成 #NISA`;
+    }
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text + '\n' + url)}`, '_blank', 'noopener');
+  }
+
+  /* ---- リセット ---- */
+  function retry() {
+    document.getElementById('form-card').style.display = 'block';
+    document.getElementById('result').style.display    = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
