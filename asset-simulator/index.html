@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資産運用シミュレーター | としお</title>
+  <meta name="description" content="積立額・期間・利回りで将来資産を試算。目標達成に必要な積立額・期間・初期投資額も逆算できます。FIRE達成率表示付き。">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+    .container { max-width: 640px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 24px; }
+    header h1 { font-size: 1.5rem; font-weight: 800; line-height: 1.4; }
+    header p { margin-top: 8px; font-size: 0.875rem; color: #555; }
+
+    .card {
+      background: #fff; border-radius: 16px; padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 20px;
+    }
+    .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
+
+    /* モードタブ */
+    .mode-tabs {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 20px;
+    }
+    .mode-tab {
+      padding: 10px 8px; border-radius: 10px;
+      border: 1.5px solid #dde3ee; background: #f8f9fb;
+      font-size: 0.78rem; font-weight: 600; color: #666;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+      line-height: 1.4;
+    }
+    .mode-tab.active {
+      border-color: #3b6cf7; background: #e8f0fe; color: #3b6cf7;
+    }
+
+    /* プリセット */
+    .preset-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #1a1a2e; color: #fff;
+      border: none; border-radius: 8px; padding: 8px 14px;
+      font-size: 0.78rem; font-weight: 600; cursor: pointer;
+      margin-bottom: 16px; transition: background 0.15s;
+    }
+    .preset-btn:hover { background: #2c3e6b; }
+
+    /* フィールド */
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 0.8rem; font-weight: 600; color: #444; margin-bottom: 6px; }
+    .input-wrap { display: flex; align-items: center; gap: 8px; }
+    .input-wrap input[type="number"] {
+      flex: 1; border: 1.5px solid #dde3ee; border-radius: 8px;
+      padding: 10px 12px; font-size: 1rem; color: #1a1a2e; outline: none;
+      transition: border-color 0.2s; -moz-appearance: textfield;
+    }
+    .input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .input-wrap input:focus { border-color: #3b6cf7; }
+    .unit { font-size: 0.875rem; color: #666; white-space: nowrap; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hint { font-size: 0.75rem; color: #888; margin-top: 4px; }
+
+    /* 計算ボタン */
+    .calc-btn {
+      width: 100%; background: #3b6cf7; color: #fff;
+      border: none; border-radius: 12px; padding: 14px;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .calc-btn:hover { background: #2c56d6; }
+    .calc-btn:active { transform: scale(0.98); }
+
+    /* 結果 */
+    #result { display: none; }
+
+    .result-main {
+      background: linear-gradient(135deg, #1a1a2e 0%, #2c3e6b 100%);
+      border-radius: 16px; padding: 24px; margin-bottom: 20px;
+      color: #fff; text-align: center;
+    }
+    .result-label { font-size: 0.8rem; color: #aab; margin-bottom: 6px; }
+    .result-value { font-size: 2.2rem; font-weight: 800; }
+    .result-sub { font-size: 0.85rem; color: #ccd; margin-top: 6px; }
+
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
+    }
+    .stat-card {
+      background: #fff; border-radius: 12px; padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center;
+    }
+    .stat-card .s-label { font-size: 0.72rem; color: #888; margin-bottom: 4px; }
+    .stat-card .s-value { font-size: 1.2rem; font-weight: 700; color: #1a1a2e; }
+    .stat-card .s-sub { font-size: 0.72rem; color: #999; margin-top: 2px; }
+
+    /* FIRE達成率 */
+    .fire-card {
+      background: #fff3e0; border: 2px solid #ff9800;
+      border-radius: 14px; padding: 18px 20px; margin-bottom: 20px;
+    }
+    .fire-card .fire-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .fire-card .fire-title { font-weight: 700; font-size: 0.95rem; }
+    .fire-bar-bg {
+      background: #ffe0b2; border-radius: 8px; height: 14px; overflow: hidden; margin: 8px 0;
+    }
+    .fire-bar { height: 100%; background: #ff9800; border-radius: 8px; transition: width 0.6s ease; }
+    .fire-card .fire-nums {
+      display: flex; justify-content: space-between;
+      font-size: 0.78rem; color: #666;
+    }
+    .fire-rate { font-size: 1.6rem; font-weight: 800; color: #e65100; }
+
+    /* マイルストーン表 */
+    .milestone-table {
+      width: 100%; border-collapse: collapse; font-size: 0.85rem;
+    }
+    .milestone-table th {
+      padding: 8px 10px; font-size: 0.72rem; color: #888;
+      border-bottom: 1px solid #eee; text-align: right;
+    }
+    .milestone-table th:first-child { text-align: left; }
+    .milestone-table td {
+      padding: 9px 10px; border-bottom: 1px solid #f0f0f0; text-align: right;
+    }
+    .milestone-table td:first-child { text-align: left; font-weight: 600; }
+    .milestone-table tr.highlight td { background: #e8f0fe; font-weight: 700; }
+
+    /* としお */
+    .toshio-box {
+      background: linear-gradient(135deg, #1a1a2e 0%, #2c3e6b 100%);
+      border-radius: 12px; padding: 18px 20px; color: #fff;
+    }
+    .toshio-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .toshio-header img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+    .toshio-header .name { font-weight: 700; font-size: 0.9rem; }
+    .toshio-header .desc { font-size: 0.75rem; color: #aab; }
+    .toshio-box p { font-size: 0.85rem; line-height: 1.7; color: #dde; }
+    .toshio-box a {
+      display: inline-block; margin-top: 12px;
+      background: #fff; color: #1a1a2e; font-weight: 700;
+      font-size: 0.85rem; padding: 8px 16px; border-radius: 8px; text-decoration: none;
+    }
+
+    /* シェア・リトライ */
+    .share-btn {
+      width: 100%; background: #000; color: #fff; border: none;
+      border-radius: 12px; padding: 13px; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s;
+    }
+    .share-btn:hover { background: #222; }
+    .retry-btn {
+      width: 100%; background: transparent; color: #3b6cf7;
+      border: 2px solid #3b6cf7; border-radius: 12px; padding: 12px;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .retry-btn:hover { background: #e8f0fe; }
+
+    .back-link {
+      display: block; text-align: center; margin-bottom: 20px;
+      font-size: 0.85rem; color: #3b6cf7; text-decoration: none;
+    }
+    footer { text-align: center; font-size: 0.75rem; color: #aaa; margin-top: 32px; }
+    footer a { color: #3b6cf7; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <a class="back-link" href="../">← ツール一覧に戻る</a>
+
+  <header>
+    <h1>📈 資産運用<br>シミュレーター</h1>
+    <p>積立・利回り・期間で将来資産を試算。逆算にも対応。</p>
+  </header>
+
+  <!-- 入力フォーム -->
+  <div class="card" id="form-card">
+
+    <!-- モード選択 -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" onclick="setMode(0)">📊 将来の<br>資産額を計算</button>
+      <button class="mode-tab" onclick="setMode(1)">💰 必要な<br>毎月積立額を計算</button>
+      <button class="mode-tab" onclick="setMode(2)">⏱ 必要な<br>積立期間を計算</button>
+      <button class="mode-tab" onclick="setMode(3)">🏦 必要な<br>初期投資額を計算</button>
+    </div>
+
+    <!-- としおプリセット -->
+    <button class="preset-btn" onclick="setPreset()">
+      🔥 としおの数字を入れてみる
+    </button>
+
+    <!-- 共通：運用利回り -->
+    <div class="field">
+      <label>運用利回り（年）</label>
+      <div class="input-wrap">
+        <input type="number" id="rate" placeholder="5.0" min="0.1" max="30" step="0.1" value="5.0">
+        <span class="unit">%</span>
+      </div>
+      <p class="hint">eMAXIS Slim 全世界：過去平均 約7〜8% / 保守的な試算なら5%</p>
+    </div>
+
+    <!-- モード別フィールド -->
+    <div id="fields-0">
+      <div class="field">
+        <label>初期投資額</label>
+        <div class="input-wrap">
+          <input type="number" id="f0-init" placeholder="100" min="0">
+          <span class="unit">万円</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>毎月の積立額</label>
+          <div class="input-wrap">
+            <input type="number" id="f0-monthly" placeholder="10" min="0">
+            <span class="unit">万円</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>積立期間</label>
+          <div class="input-wrap">
+            <input type="number" id="f0-period" placeholder="30" min="1" max="60">
+            <span class="unit">年</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="fields-1" style="display:none">
+      <div class="field-row">
+        <div class="field">
+          <label>初期投資額</label>
+          <div class="input-wrap">
+            <input type="number" id="f1-init" placeholder="0" min="0">
+            <span class="unit">万円</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>目標の資産額</label>
+          <div class="input-wrap">
+            <input type="number" id="f1-target" placeholder="10000" min="1">
+            <span class="unit">万円</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>積立期間</label>
+        <div class="input-wrap">
+          <input type="number" id="f1-period" placeholder="30" min="1" max="60">
+          <span class="unit">年</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="fields-2" style="display:none">
+      <div class="field-row">
+        <div class="field">
+          <label>初期投資額</label>
+          <div class="input-wrap">
+            <input type="number" id="f2-init" placeholder="0" min="0">
+            <span class="unit">万円</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>目標の資産額</label>
+          <div class="input-wrap">
+            <input type="number" id="f2-target" placeholder="10000" min="1">
+            <span class="unit">万円</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>毎月の積立額</label>
+        <div class="input-wrap">
+          <input type="number" id="f2-monthly" placeholder="10" min="0.1">
+          <span class="unit">万円</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="fields-3" style="display:none">
+      <div class="field-row">
+        <div class="field">
+          <label>目標の資産額</label>
+          <div class="input-wrap">
+            <input type="number" id="f3-target" placeholder="10000" min="1">
+            <span class="unit">万円</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>毎月の積立額</label>
+          <div class="input-wrap">
+            <input type="number" id="f3-monthly" placeholder="10" min="0">
+            <span class="unit">万円</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>積立期間</label>
+        <div class="input-wrap">
+          <input type="number" id="f3-period" placeholder="30" min="1" max="60">
+          <span class="unit">年</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">計算する →</button>
+  </div>
+
+  <!-- 結果エリア -->
+  <div id="result">
+
+    <!-- メイン結果 -->
+    <div class="result-main">
+      <div class="result-label" id="r-label">将来の資産額</div>
+      <div class="result-value" id="r-value">－</div>
+      <div class="result-sub" id="r-sub"></div>
+    </div>
+
+    <!-- サブ数値 -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="s-label">元本合計</div>
+        <div class="s-value" id="r-principal">－</div>
+        <div class="s-sub">投資した金額</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">運用益</div>
+        <div class="s-value" id="r-gain">－</div>
+        <div class="s-sub">複利の恩恵</div>
+      </div>
+    </div>
+
+    <!-- FIRE達成率 -->
+    <div class="fire-card" id="fire-card">
+      <div class="fire-header">
+        <span style="font-size:1.4rem">🔥</span>
+        <div>
+          <div class="fire-title">FIRE達成率（目標1億円）</div>
+        </div>
+        <div class="fire-rate" id="fire-rate" style="margin-left:auto">－%</div>
+      </div>
+      <div class="fire-bar-bg">
+        <div class="fire-bar" id="fire-bar" style="width:0%"></div>
+      </div>
+      <div class="fire-nums">
+        <span>¥0</span>
+        <span id="fire-fv-label">－</span>
+        <span>¥1億円</span>
+      </div>
+    </div>
+
+    <!-- マイルストーン -->
+    <div class="card">
+      <h2>📅 年別 資産推移</h2>
+      <table class="milestone-table">
+        <thead>
+          <tr>
+            <th>経過年数</th>
+            <th style="text-align:right">資産額</th>
+            <th style="text-align:right">元本</th>
+            <th style="text-align:right">運用益</th>
+          </tr>
+        </thead>
+        <tbody id="milestone-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- としお -->
+    <div class="card">
+      <div class="toshio-box">
+        <div class="toshio-header">
+          <img src="https://pbs.twimg.com/profile_images/1931350155112128512/SPWm8K8G_400x400.jpg" alt="としお">
+          <div>
+            <div class="name">としお</div>
+            <div class="desc">30代IT・4人家族・FIRE達成率64%</div>
+          </div>
+        </div>
+        <p id="toshio-msg">初期投資6,400万円・利回り5%で運用中。このまま積立を続ければ〇年後に1億円を超える計算です。</p>
+        <a href="https://note.com/toshi11_" target="_blank" rel="noopener">📝 資産形成の実践をnoteで読む →</a>
+      </div>
+    </div>
+
+    <!-- Xシェア -->
+    <div class="card">
+      <button class="share-btn" onclick="shareX()">𝕏 で結果をシェアする</button>
+    </div>
+
+    <button class="retry-btn" onclick="retry()">条件を変えて再計算する</button>
+
+  </div><!-- /#result -->
+
+</div>
+
+<footer>
+  <p>© としお | <a href="https://note.com/toshi11_" target="_blank" rel="noopener">note</a> | <a href="https://x.com/toshi11_" target="_blank" rel="noopener">X</a></p>
+  <p style="margin-top:6px">本ツールは参考情報の提供を目的としており、投資アドバイスではありません。</p>
+</footer>
+
+<script>
+  let currentMode = 0;
+  let shareData = {};
+
+  const modeLabels = [
+    '将来の資産額を計算',
+    '必要な毎月積立額を計算',
+    '必要な積立期間を計算',
+    '必要な初期投資額を計算'
+  ];
+
+  function setMode(m) {
+    currentMode = m;
+    document.querySelectorAll('.mode-tab').forEach((el, i) => {
+      el.classList.toggle('active', i === m);
+    });
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('fields-' + i).style.display = i === m ? 'block' : 'none';
+    }
+  }
+
+  function setPreset() {
+    document.getElementById('rate').value = '5.0';
+    if (currentMode === 0) {
+      document.getElementById('f0-init').value = '6400';
+      document.getElementById('f0-monthly').value = '10';
+      document.getElementById('f0-period').value = '10';
+    } else if (currentMode === 1) {
+      document.getElementById('f1-init').value = '6400';
+      document.getElementById('f1-target').value = '10000';
+      document.getElementById('f1-period').value = '10';
+    } else if (currentMode === 2) {
+      document.getElementById('f2-init').value = '6400';
+      document.getElementById('f2-target').value = '10000';
+      document.getElementById('f2-monthly').value = '10';
+    } else {
+      document.getElementById('f3-target').value = '10000';
+      document.getElementById('f3-monthly').value = '10';
+      document.getElementById('f3-period').value = '10';
+    }
+  }
+
+  function fv(P, pmt, r, n) {
+    if (r === 0) return P + pmt * n;
+    return P * Math.pow(1 + r, n) + pmt * (Math.pow(1 + r, n) - 1) / r;
+  }
+
+  function calcPMT(target, P, r, n) {
+    if (r === 0) return (target - P) / n;
+    const factor = (Math.pow(1 + r, n) - 1) / r;
+    return (target - P * Math.pow(1 + r, n)) / factor;
+  }
+
+  function calcN(target, P, pmt, r) {
+    if (r === 0) return (target - P) / pmt;
+    const num = Math.log((target + pmt / r) / (P + pmt / r));
+    const den = Math.log(1 + r);
+    return num / den;
+  }
+
+  function calcP(target, pmt, r, n) {
+    if (r === 0) return target - pmt * n;
+    const factor = (Math.pow(1 + r, n) - 1) / r;
+    return (target - pmt * factor) / Math.pow(1 + r, n);
+  }
+
+  function calculate() {
+    const annualRate = parseFloat(document.getElementById('rate').value);
+    if (!annualRate) { alert('運用利回りを入力してください'); return; }
+    const r = annualRate / 100 / 12;
+
+    let P, pmt, n_months, n_years, target, result, resultLabel, resultSub;
+
+    if (currentMode === 0) {
+      P   = parseFloat(document.getElementById('f0-init').value) || 0;
+      pmt = parseFloat(document.getElementById('f0-monthly').value) || 0;
+      n_years = parseFloat(document.getElementById('f0-period').value);
+      if (!n_years) { alert('積立期間を入力してください'); return; }
+      n_months = n_years * 12;
+      result = fv(P * 10000, pmt * 10000, r, n_months);
+      resultLabel = '将来の資産額';
+      resultSub = `${n_years}年後の見込み資産`;
+      target = result;
+
+    } else if (currentMode === 1) {
+      P      = parseFloat(document.getElementById('f1-init').value) || 0;
+      target = parseFloat(document.getElementById('f1-target').value);
+      n_years = parseFloat(document.getElementById('f1-period').value);
+      if (!target || !n_years) { alert('目標資産額と積立期間を入力してください'); return; }
+      n_months = n_years * 12;
+      const pmtYen = calcPMT(target * 10000, P * 10000, r, n_months);
+      if (pmtYen < 0) { alert('初期投資額だけで目標を達成できます！'); return; }
+      pmt = pmtYen / 10000;
+      result = pmtYen;
+      resultLabel = '毎月の積立額';
+      resultSub = `${n_years}年で${fmt(target, 0)}万円を達成するために必要`;
+
+    } else if (currentMode === 2) {
+      P      = parseFloat(document.getElementById('f2-init').value) || 0;
+      target = parseFloat(document.getElementById('f2-target').value);
+      pmt    = parseFloat(document.getElementById('f2-monthly').value);
+      if (!target || !pmt) { alert('目標資産額と毎月積立額を入力してください'); return; }
+      n_months = calcN(target * 10000, P * 10000, pmt * 10000, r);
+      if (n_months <= 0) { alert('既に目標を達成しています！'); return; }
+      n_years = n_months / 12;
+      result = n_months;
+      resultLabel = '必要な積立期間';
+      resultSub = `月${pmt}万円で${fmt(target, 0)}万円を達成するまで`;
+
+    } else {
+      target = parseFloat(document.getElementById('f3-target').value);
+      pmt    = parseFloat(document.getElementById('f3-monthly').value) || 0;
+      n_years = parseFloat(document.getElementById('f3-period').value);
+      if (!target || !n_years) { alert('目標資産額と積立期間を入力してください'); return; }
+      n_months = n_years * 12;
+      const pYen = calcP(target * 10000, pmt * 10000, r, n_months);
+      P = Math.max(0, pYen / 10000);
+      result = Math.max(0, pYen);
+      resultLabel = '必要な初期投資額';
+      resultSub = `${n_years}年で${fmt(target, 0)}万円に到達するために必要`;
+    }
+
+    // メイン表示
+    document.getElementById('r-label').textContent = resultLabel;
+
+    if (currentMode === 2) {
+      const yrs = Math.floor(n_years);
+      const mos = Math.round((n_years - yrs) * 12);
+      document.getElementById('r-value').textContent = `${yrs}年${mos > 0 ? mos + 'ヶ月' : ''}`;
+    } else if (currentMode === 1) {
+      document.getElementById('r-value').textContent = fmt(result / 10000, 1) + ' 万円 / 月';
+    } else {
+      document.getElementById('r-value').textContent = fmt(result / 10000, 0) + ' 万円';
+    }
+    document.getElementById('r-sub').textContent = resultSub;
+
+    // 元本・運用益（mode 0 のみ正確）
+    const finalFV = (currentMode === 0) ? result
+      : (currentMode === 1) ? fv(P * 10000, result, r, n_months)
+      : (currentMode === 2) ? fv(P * 10000, pmt * 10000, r, n_months)
+      : target * 10000;
+
+    const principal = (currentMode === 0) ? (P * 10000 + pmt * n_months * 10000)
+      : (currentMode === 1) ? (P * 10000 + (result) * n_months)
+      : (currentMode === 2) ? (P * 10000 + pmt * 10000 * n_months)
+      : (result + pmt * 10000 * n_months);
+
+    const gain = finalFV - principal;
+    document.getElementById('r-principal').textContent = fmt(principal / 10000, 0) + '万円';
+    document.getElementById('r-gain').textContent = fmt(gain / 10000, 0) + '万円';
+
+    // FIRE達成率
+    const firePct = Math.min(200, (finalFV / 100000000) * 100);
+    document.getElementById('fire-rate').textContent = firePct.toFixed(1) + '%';
+    document.getElementById('fire-bar').style.width = Math.min(100, firePct) + '%';
+    document.getElementById('fire-fv-label').textContent = fmt(finalFV / 10000, 0) + '万円';
+
+    // マイルストーン表
+    const initP = (currentMode === 3) ? Math.max(0, result) : P * 10000;
+    const monthlyPmt = (currentMode === 0) ? pmt * 10000
+      : (currentMode === 1) ? result
+      : (currentMode === 2) ? pmt * 10000
+      : pmt * 10000;
+    const totalYears = Math.ceil(currentMode === 2 ? n_years : n_years);
+    const milestones = [];
+    const stepYears = totalYears <= 10 ? 1 : totalYears <= 30 ? 5 : 10;
+    for (let y = stepYears; y <= totalYears; y += stepYears) {
+      milestones.push(y);
+    }
+    if (!milestones.includes(totalYears)) milestones.push(totalYears);
+
+    const tbody = document.getElementById('milestone-tbody');
+    tbody.innerHTML = '';
+    milestones.forEach(y => {
+      const nm = y * 12;
+      const fvY = fv(initP, monthlyPmt, r, nm);
+      const prinY = initP + monthlyPmt * nm;
+      const gainY = fvY - prinY;
+      const isLast = y === totalYears || y === milestones[milestones.length - 1];
+      const tr = document.createElement('tr');
+      if (isLast) tr.classList.add('highlight');
+      tr.innerHTML = `
+        <td>${y}年後</td>
+        <td>${fmt(fvY / 10000, 0)}万円</td>
+        <td>${fmt(prinY / 10000, 0)}万円</td>
+        <td style="color:#2e7d32">+${fmt(gainY / 10000, 0)}万円</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // としおコメント
+    const toshioFire = ((finalFV / 100000000) * 100).toFixed(1);
+    document.getElementById('toshio-msg').textContent =
+      `私は現在FIRE達成率${toshioFire >= 64 ? '64' : toshioFire}%。このシミュレーターで毎月の積立効果を確認しながら運用しています。複利の力は時間が経つほど大きくなるので、早く始めるほど有利です。`;
+
+    // シェアデータ
+    shareData = {
+      mode: modeLabels[currentMode],
+      rate: annualRate,
+      result: currentMode === 2
+        ? `${Math.floor(n_years)}年${Math.round((n_years % 1) * 12)}ヶ月`
+        : currentMode === 1
+          ? fmt(result / 10000, 1) + '万円/月'
+          : fmt(result / 10000, 0) + '万円',
+      firePct: firePct.toFixed(1)
+    };
+
+    document.getElementById('form-card').style.display = 'none';
+    document.getElementById('result').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function shareX() {
+    const d = shareData;
+    const text = `【資産運用シミュレーター】\n${d.mode}で試算しました\n\n結果：${d.result}\n運用利回り：${d.rate}%\nFIRE達成率換算：${d.firePct}%\n\nツール → https://toshi11-git.github.io/fire-tools/asset-simulator/\n#資産形成 #FIRE #NISA #積立投資`;
+    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+  }
+
+  function retry() {
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('form-card').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function fmt(n, d) {
+    if (isNaN(n)) return '－';
+    return n.toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+</script>
+</body>
+</html>

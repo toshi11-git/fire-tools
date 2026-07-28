@@ -21,6 +21,7 @@
 ### 住宅ローン系
 | 優先度 | ツール名 | 連動コンテンツ | SEOキーワード | ステータス |
 |---|---|---|---|---|
+| ★★★ | **住宅ローン 大丈夫？診断** | Kindle第1弾 | 「住宅ローン 診断」「返済比率 計算」 | ✅ 公開済 (7/27) |
 | ★★★ | 住宅ローン繰り上げ返済計算 | Kindle第1弾 | 「繰り上げ返済 シミュレーター」 | 未着手 |
 | ★★☆ | 変動 vs 固定金利 比較計算 | Kindle第1弾 | 「変動金利 固定金利 比較」 | 未着手 |
 | ★★☆ | 住宅ローン控除（減税）効果計算 | Kindle第1弾 | 「住宅ローン控除 いくら」 | 未着手 |
@@ -112,14 +113,14 @@ $$FV = P(1+r)^n + PMT \times \frac{(1+r)^n - 1}{r}$$
 ## 公開方法
 
 ```
-GitHub リポジトリ: toshi11_/fire-tools
-公開URL: toshi11_.github.io/fire-tools/
+GitHub リポジトリ: toshi11-git/fire-tools
+公開URL: https://toshi11-git.github.io/fire-tools/
 
-├── index.html          # ツール一覧トップ
-├── asset-simulator/    # 資産運用シミュレーター
-├── loan-simulator/     # 住宅ローン計算
-├── fire-checker/       # FIRE達成率
-└── dividend-simulator/ # 配当金計算
+├── index.html          # ✅ ツール一覧トップ（公開済）
+├── loan-check/         # ✅ 住宅ローン大丈夫？診断（公開済）
+├── asset-simulator/    # 資産運用シミュレーター（未着手）
+├── fire-checker/       # FIRE達成率チェッカー（未着手）
+└── dividend-simulator/ # 配当金シミュレーター（未着手）
 ```
 
 ## 収益化導線
@@ -133,7 +134,7 @@ GitHub リポジトリ: toshi11_/fire-tools
 
 ## 次のアクション
 
-1. `asset-simulator/` を実装（HTML+JS）
-2. GitHub に `fire-tools` リポジトリ作成
-3. GitHub Pages で公開
-4. note記事「このツール作りました」を公開 → X/Threads告知
+1. **loan-check をnote記事で紹介**（「このツール作りました」→ X/Threads告知）
+2. `fire-checker/` を実装（FIRE達成率チェッカー）
+3. `asset-simulator/` を実装（資産運用シミュレーター・4モード）
+4. 各ツールのXシェアURLを本番URLに更新済み確認
