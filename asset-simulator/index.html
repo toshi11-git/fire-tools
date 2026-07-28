@@ -119,7 +119,13 @@
     }
     .fire-rate { font-size: 1.6rem; font-weight: 800; color: #e65100; }
 
-    /* マイルストーン表 */
+    /* チャート */
+    .chart-wrap {
+      position: relative; width: 100%; overflow: hidden;
+    }
+    #growth-chart {
+      width: 100%; height: auto; display: block;
+    }
     .milestone-table {
       width: 100%; border-collapse: collapse; font-size: 0.85rem;
     }
@@ -360,6 +366,14 @@
       </div>
     </div>
 
+    <!-- グラフ -->
+    <div class="card">
+      <h2>📊 資産推移グラフ</h2>
+      <div class="chart-wrap">
+        <canvas id="growth-chart"></canvas>
+      </div>
+    </div>
+
     <!-- マイルストーン -->
     <div class="card">
       <h2>📅 年別 資産推移</h2>
@@ -564,7 +578,7 @@
     document.getElementById('fire-bar').style.width = Math.min(100, firePct) + '%';
     document.getElementById('fire-fv-label').textContent = fmt(finalFV / 10000, 0) + '万円';
 
-    // マイルストーン表
+    // マイルストーン表 & グラフ用データ
     const initP = (currentMode === 3) ? Math.max(0, result) : P * 10000;
     const monthlyPmt = (currentMode === 0) ? pmt * 10000
       : (currentMode === 1) ? result
@@ -577,6 +591,120 @@
       milestones.push(y);
     }
     if (!milestones.includes(totalYears)) milestones.push(totalYears);
+
+    // --- グラフ描画 ---
+    const canvas = document.getElementById('growth-chart');
+    const DPR = window.devicePixelRatio || 1;
+    const CW = canvas.parentElement.clientWidth;
+    const CH = Math.round(CW * 0.55);
+    canvas.width  = CW * DPR;
+    canvas.height = CH * DPR;
+    canvas.style.width  = CW + 'px';
+    canvas.style.height = CH + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(DPR, DPR);
+
+    const PAD = { top: 20, right: 20, bottom: 48, left: 72 };
+    const gW = CW - PAD.left - PAD.right;
+    const gH = CH - PAD.top  - PAD.bottom;
+
+    // 全年のデータ（毎年）
+    const chartPoints = [];
+    for (let y = 0; y <= totalYears; y++) {
+      chartPoints.push({
+        y,
+        fvY:   fv(initP, monthlyPmt, r, y * 12),
+        prinY: initP + monthlyPmt * y * 12
+      });
+    }
+    const maxFV = chartPoints[chartPoints.length - 1].fvY;
+    const minFV = initP;
+
+    function cx(y)  { return PAD.left + (y / totalYears) * gW; }
+    function cy(v)  { return PAD.top  + gH - ((v - minFV) / (maxFV - minFV || 1)) * gH; }
+
+    // グリッド
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 1;
+    const gridLines = 4;
+    for (let i = 0; i <= gridLines; i++) {
+      const yv = minFV + (maxFV - minFV) * (i / gridLines);
+      const yp = cy(yv);
+      ctx.beginPath();
+      ctx.moveTo(PAD.left, yp);
+      ctx.lineTo(PAD.left + gW, yp);
+      ctx.stroke();
+      // Y軸ラベル
+      ctx.fillStyle = '#aaa';
+      ctx.font = `${Math.max(10, CW * 0.022)}px -apple-system, sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.fillText(fmt(yv / 10000, 0) + '万', PAD.left - 6, yp + 4);
+    }
+
+    // 元本エリア（薄いグレー）
+    ctx.beginPath();
+    ctx.moveTo(cx(0), cy(initP));
+    chartPoints.forEach(p => ctx.lineTo(cx(p.y), cy(p.prinY)));
+    ctx.lineTo(cx(totalYears), cy(minFV));
+    ctx.lineTo(cx(0), cy(minFV));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(180,200,255,0.25)';
+    ctx.fill();
+
+    // 資産エリア（グラデーション）
+    const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + gH);
+    grad.addColorStop(0, 'rgba(59,108,247,0.35)');
+    grad.addColorStop(1, 'rgba(59,108,247,0.05)');
+    ctx.beginPath();
+    ctx.moveTo(cx(0), cy(initP));
+    chartPoints.forEach(p => ctx.lineTo(cx(p.y), cy(p.fvY)));
+    ctx.lineTo(cx(totalYears), cy(minFV));
+    ctx.lineTo(cx(0), cy(minFV));
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // 資産ライン
+    ctx.beginPath();
+    ctx.moveTo(cx(0), cy(initP));
+    chartPoints.forEach(p => ctx.lineTo(cx(p.y), cy(p.fvY)));
+    ctx.strokeStyle = '#3b6cf7';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // X軸ラベル
+    ctx.fillStyle = '#aaa';
+    ctx.textAlign = 'center';
+    ctx.font = `${Math.max(10, CW * 0.022)}px -apple-system, sans-serif`;
+    milestones.forEach(y => {
+      ctx.fillText(y + '年後', cx(y), CH - PAD.bottom + 18);
+    });
+
+    // 最終値ラベル
+    const lastPt = chartPoints[chartPoints.length - 1];
+    ctx.fillStyle = '#3b6cf7';
+    ctx.font = `bold ${Math.max(11, CW * 0.025)}px -apple-system, sans-serif`;
+    ctx.textAlign = cx(totalYears) > CW - 100 ? 'right' : 'left';
+    ctx.fillText(fmt(lastPt.fvY / 10000, 0) + '万円', cx(totalYears) + (ctx.textAlign === 'right' ? -6 : 6), cy(lastPt.fvY) - 8);
+
+    // 凡例
+    const legY = CH - 10;
+    const legItems = [
+      { color: '#3b6cf7', label: '資産額' },
+      { color: 'rgba(120,150,240,0.5)', label: '元本' }
+    ];
+    let legX = PAD.left;
+    ctx.font = `${Math.max(10, CW * 0.022)}px -apple-system, sans-serif`;
+    legItems.forEach(item => {
+      ctx.fillStyle = item.color;
+      ctx.fillRect(legX, legY - 10, 14, 10);
+      ctx.fillStyle = '#888';
+      ctx.textAlign = 'left';
+      ctx.fillText(item.label, legX + 18, legY);
+      legX += 70;
+    });
+    // --- グラフ終わり ---
 
     const tbody = document.getElementById('milestone-tbody');
     tbody.innerHTML = '';
